@@ -3,45 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dream Journey</title>
+    <title>Dream Journey - ZM3</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
-            background: #000;
+            background: #1a1a2e;
             width: 100%;
             height: 100%;
             overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         body {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
         }
-        #game {
+        #loading {
+            position: absolute;
+            z-index: 10;
+            color: #e0e0e0;
+            text-align: center;
+            transition: opacity 0.5s;
+        }
+        #loading .title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #loading .status {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 12px;
+        }
+        #loading .bar-wrap {
+            width: 300px;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        #loading .bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        #game-container {
             width: 100vw;
             height: calc(100vw * 590 / 940);
             max-height: 100vh;
             max-width: calc(100vh * 940 / 590);
+            position: relative;
+        }
+        #game-container.hidden { opacity: 0; }
+        #error {
+            display: none;
+            position: absolute;
+            z-index: 20;
+            color: #ff6b6b;
+            text-align: center;
+            max-width: 400px;
+            padding: 20px;
+        }
+        #error .msg {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        #error .detail {
+            font-size: 12px;
+            color: #999;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
-    <div id="game"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js"></script>
+    <div id="loading">
+        <div class="title">Dream Journey</div>
+        <div class="status" id="load-status">Initializing Ruffle...</div>
+        <div class="bar-wrap"><div class="bar" id="load-bar"></div></div>
+    </div>
+    <div id="game-container" class="hidden"></div>
+    <div id="error">
+        <div class="msg">Failed to load game</div>
+        <div class="detail" id="error-detail"></div>
+    </div>
+
     <script>
-        window.RufflePlayer = window.RufflePlayer || {};
-        window.RufflePlayer.config = {
-            "upgradeToHttps": false,
-            "maxExecutionTime": 120,
-            "logLevel": "warn",
-            "autoplay": "on"
+        // Service Worker registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').then(function(reg) {
+                console.log('[Main] SW registered:', reg.scope);
+            }).catch(function(err) {
+                console.warn('[Main] SW registration failed:', err);
+            });
+        }
+
+        // Loading UI
+        var loadStatus = document.getElementById('load-status');
+        var loadBar = document.getElementById('load-bar');
+        var gameContainer = document.getElementById('game-container');
+        var loadingDiv = document.getElementById('loading');
+        var errorDiv = document.getElementById('error');
+        var errorDetail = document.getElementById('error-detail');
+
+        function setStatus(text, pct) {
+            loadStatus.textContent = text;
+            if (pct !== undefined) loadBar.style.width = pct + '%';
+        }
+
+        function showError(msg, detail) {
+            loadingDiv.style.display = 'none';
+            errorDiv.style.display = 'block';
+            errorDetail.textContent = detail || '';
+        }
+
+        // Load Ruffle
+        setStatus('Loading Ruffle engine...', 10);
+
+        var script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js';
+        script.onload = function() {
+            setStatus('Ruffle loaded, initializing player...', 30);
+            initGame();
         };
-        
-        window.addEventListener('DOMContentLoaded', () => {
-            const ruffle = RufflePlayer.newest().createPlayer();
-            document.getElementById('game').appendChild(ruffle);
-            ruffle.load('./zm3.swf');
-        });
+        script.onerror = function(e) {
+            showError('Failed to load Ruffle engine', 'CDN might be blocked. Try using a VPN or check your network.');
+        };
+        document.head.appendChild(script);
+
+        function initGame() {
+            try {
+                window.RufflePlayer = window.RufflePlayer || {};
+                window.RufflePlayer.config = {
+                    "upgradeToHttps": false,
+                    "maxExecutionTime": 300,
+                    "logLevel": "warn",
+                    "autoplay": "on",
+                    "openUrlMode": "allow"
+                };
+
+                var ruffle = RufflePlayer.newest().createPlayer();
+                gameContainer.appendChild(ruffle);
+                
+                setStatus('Loading game SWF...', 40);
+                
+                var loadPromise = ruffle.load('./zm3.swf');
+                
+                if (loadPromise && loadPromise.then) {
+                    loadPromise.then(function() {
+                        setStatus('Game loaded!', 100);
+                        setTimeout(function() {
+                            loadingDiv.style.opacity = '0';
+                            gameContainer.classList.remove('hidden');
+                            setTimeout(function() { loadingDiv.style.display = 'none'; }, 500);
+                        }, 500);
+                    }).catch(function(err) {
+                        showError('Game load failed', err.message || String(err));
+                    });
+                } else {
+                    // Fallback for older Ruffle versions
+                    setStatus('Game loading...', 60);
+                    setTimeout(function() {
+                        loadingDiv.style.opacity = '0';
+                        gameContainer.classList.remove('hidden');
+                        setTimeout(function() { loadingDiv.style.display = 'none'; }, 500);
+                    }, 3000);
+                }
+            } catch (e) {
+                showError('Initialization error', e.message);
+            }
+        }
     </script>
 </body>
 </html>
