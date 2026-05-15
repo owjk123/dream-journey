@@ -7,85 +7,36 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none}
-#game{width:100%;height:100%;display:flex;justify-content:center;align-items:center}
-#loading{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(135deg,#1a0a00 0%,#2d1810 50%,#1a0a00 100%);z-index:1000;font-family:"Microsoft YaHei","SimHei",sans-serif;color:#d4af37}
-#loading h1{font-size:2rem;text-shadow:0 0 10px #d4af37,0 2px 4px rgba(0,0,0,0.8);margin-bottom:10px}
-#loading p{font-size:0.9rem;color:#a08030;margin-top:10px}
-#loading-bar{width:240px;height:8px;background:rgba(212,175,55,0.2);border-radius:4px;overflow:hidden;border:1px solid #d4af37;margin-top:20px}
-#loading-progress{height:100%;background:linear-gradient(90deg,#8b4513,#d4af37);width:0%;transition:width 0.3s}
-.spinner{width:40px;height:40px;border:4px solid rgba(212,175,55,0.2);border-top-color:#d4af37;border-radius:50%;animation:spin 1s linear infinite;margin-top:20px}
-@keyframes spin{to{transform:rotate(360deg)}}
+#game{width:100%;height:100%}
 </style>
 </head>
 <body>
-<div id="loading">
-<h1>造梦江湖</h1>
-<p>小宝传奇 · 原版运行</p>
-<div id="loading-bar"><div id="loading-progress"></div></div>
-<p id="loading-text">加载Ruffle模拟器...</p>
-<div class="spinner"></div>
-</div>
 <div id="game"></div>
-
-<script src="https://unpkg.com/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.15/ruffle.js"></script>
 <script>
-(function(){
-  const SWF_URL = 'https://sda.4399.com/4399swf/upload_swf/ftp7/hanbao/20120107/6/v3870.swf';
-  const loadingBar = document.getElementById('loading-progress');
-  const loadingText = document.getElementById('loading-text');
-  const loadingDiv = document.getElementById('loading');
-
-  function updateProgress(pct, text) {
-    loadingBar.style.width = pct + '%';
-    if (text) loadingText.textContent = text;
-  }
-
-  updateProgress(10, '初始化Ruffle...');
-
-  window.RufflePlayer = window.RufflePlayer || {};
-  window.RufflePlayer.config = {
+window.RufflePlayer = window.RufflePlayer || {};
+window.RufflePlayer.config = {
     backgroundColor: '#000000',
     letterbox: 'on',
     polyfills: true,
     autostart: true,
     maxExecutionDuration: 600,
     logLevel: 'warn',
-    base: 'https://sda.4399.com/4399swf/upload_swf/ftp7/hanbao/20120107/6/',
     preferFlash: false,
     openUrlMode: 'allow'
-  };
-
-  const ruffle = window.RufflePlayer.installer.latestAvailableVersion();
-  
-  window.addEventListener('DOMContentLoaded', function() {
-    updateProgress(30, 'Ruffle就绪，加载游戏SWF...');
-    
-    const container = document.getElementById('game');
-    const player = window.RufflePlayer.newest();
-    const instance = player.createPlayer();
-    container.appendChild(instance);
-
-    updateProgress(50, '下载原版游戏文件 (3.1MB)...');
-
-    instance.config = window.RufflePlayer.config;
-
-    // Listen for loaded event
-    instance.addEventListener('loaded', function() {
-      updateProgress(100, '加载完成！');
-      setTimeout(function() {
-        loadingDiv.style.opacity = '0';
-        loadingDiv.style.transition = 'opacity 0.5s';
-        setTimeout(function() { loadingDiv.style.display = 'none'; }, 500);
-      }, 500);
-    });
-
-    instance.addEventListener('loaderror', function(e) {
-      loadingText.textContent = '加载失败: ' + (e.detail || '未知错误');
-      loadingText.style.color = '#ff4444';
-    });
-
-    // Load the SWF
-    instance.load({ url: SWF_URL });
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js"></script>
+<script>
+(function(){
+  const container = document.getElementById('game');
+  const player = window.RufflePlayer.newest();
+  const instance = player.createPlayer();
+  instance.style.width = '100%';
+  instance.style.height = '100%';
+  container.appendChild(instance);
+  instance.load({
+    url: 'v3870.swf',
+    base: 'https://sda.4399.com/4399swf/upload_swf/ftp7/hanbao/20120107/6/'
   });
 })();
 </script>
