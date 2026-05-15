@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dream Journey - Ruffle Test</title>
-    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js"></script>
     <style>
         body {
             background: #1a1a2e;
@@ -17,6 +16,7 @@
             font-family: Arial, sans-serif;
             color: #fff;
         }
+        h1 { margin-bottom: 10px; }
         #container {
             position: relative;
         }
@@ -25,9 +25,14 @@
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(100, 100, 150, 0.5);
         }
+        #status {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #0af;
+        }
         #log {
             width: 940px;
-            height: 200px;
+            height: 150px;
             background: rgba(0,0,0,0.85);
             color: #0f0;
             font-family: monospace;
@@ -35,98 +40,94 @@
             padding: 10px;
             overflow-y: auto;
             border-radius: 8px;
+            margin-top: 20px;
             box-sizing: border-box;
-            margin-top: 20px;
         }
-        #log h3 {
-            margin: 0 0 10px 0;
-            color: #fff;
-        }
-        #status {
-            margin-top: 20px;
-            font-size: 14px;
-        }
-        .success { color: #0f0; }
-        .error { color: #f00; }
-        .info { color: #0af; }
     </style>
 </head>
 <body>
     <h1>Dream Journey - Ruffle Test</h1>
-    <div id="status">Loading...</div>
+    <div id="status">Loading Ruffle...</div>
     <div id="container">
-        <div id="log">
-            <h3>Console Log:</h3>
-            <pre id="logContent"></pre>
-        </div>
-        <div id="ruffle-container"></div>
+        <embed id="game" src="./zm3.swf" width="940" height="590" 
+               type="application/x-shockwave-flash"
+               pluginspage="https://www.adobe.com/go/getflashplayer">
     </div>
+    <div id="log">Console output will appear here...</div>
+    
+    <!-- Load Ruffle -->
+    <script src="https://unpkg.com/@ruffle-rs/ruffle@latest"></script>
     <script>
-        const logEl = document.getElementById('logContent');
+        const logEl = document.getElementById('log');
         const statusEl = document.getElementById('status');
         
-        function log(msg, type = 'info') {
-            const prefix = type === 'error' ? '[ERROR]' : type === 'success' ? '[OK]' : '[LOG]';
-            logEl.textContent += prefix + ' ' + msg + '\n';
+        function log(msg) {
+            logEl.textContent += msg + '\n';
             logEl.scrollTop = logEl.scrollHeight;
             console.log(msg);
         }
         
         window.addEventListener('error', function(e) {
-            log(e.message + ' at ' + e.filename + ':' + e.lineno, 'error');
+            log('[ERROR] ' + e.message + ' at ' + e.filename + ':' + e.lineno);
         });
         
         window.addEventListener('unhandledrejection', function(e) {
-            log('Unhandled promise: ' + e.reason, 'error');
+            log('[ERROR] Unhandled promise: ' + e.reason);
         });
         
-        // Check if Ruffle is loaded
-        log('Checking Ruffle status...');
-        
-        if (typeof Ruffle === 'undefined') {
-            log('Ruffle not loaded!', 'error');
-            statusEl.textContent = 'ERROR: Ruffle failed to load';
-            statusEl.className = 'error';
-        } else {
-            log('Ruffle loaded successfully', 'success');
-            
-            // Create player
-            const player = RufflePlayer.new();
-            player.config = {
-                "upgradeToHttps": false,
-                "maxExecutionTime": 30,
-                "unavailableUrl": "ignore",
-                "networkHost": "allow"
-            };
-            
-            const container = document.getElementById('ruffle-container');
-            container.appendChild(player);
-            
-            // Load the SWF
-            log('Loading SWF...');
-            player.load('./zm3.swf').then(() => {
-                log('SWF loaded successfully', 'success');
-                statusEl.textContent = 'SUCCESS: SWF loaded';
-                statusEl.className = 'success';
-            }).catch((e) => {
-                log('SWF load error: ' + e, 'error');
-                statusEl.textContent = 'ERROR: ' + e;
-                statusEl.className = 'error';
-            });
-            
-            // Listen for Ruffle events
-            player.addEventListener('loaded', (e) => {
-                log('Ruffle loaded event: ' + JSON.stringify(e.detail), 'success');
-            });
-            
-            player.addEventListener('error', (e) => {
-                log('Ruffle error: ' + JSON.stringify(e.detail), 'error');
-            });
-            
-            player.addEventListener('log', (e) => {
-                log('SWF log: ' + e.detail.message, 'info');
-            });
+        // Wait for Ruffle to load
+        function checkRuffle() {
+            if (typeof Ruffle !== 'undefined') {
+                log('[OK] Ruffle loaded!');
+                statusEl.textContent = 'Ruffle ready!';
+                statusEl.style.color = '#0f0';
+                
+                // Install Ruffle as the player for embed tags
+                const ruffle = RufflePlayer.new();
+                ruffle.config = {
+                    "upgradeToHttps": false,
+                    "maxExecutionTime": 60,
+                    "logLevel": "debug"
+                };
+                
+                // Get the embed element
+                const embed = document.getElementById('game');
+                
+                // Replace with Ruffle
+                const wrapper = document.createElement('div');
+                wrapper.appendChild(ruffle);
+                embed.parentNode.replaceChild(wrapper, embed);
+                
+                // Load the SWF
+                ruffle.load('./zm3.swf').then(() => {
+                    log('[OK] SWF loaded successfully!');
+                    statusEl.textContent = 'SUCCESS: SWF loaded!';
+                    statusEl.style.color = '#0f0';
+                }).catch((e) => {
+                    log('[ERROR] SWF load error: ' + e);
+                    statusEl.textContent = 'ERROR: ' + e;
+                    statusEl.style.color = '#f00';
+                });
+                
+                // Listen for Ruffle events
+                ruffle.addEventListener('loaded', (e) => {
+                    log('[OK] Ruffle loaded event: ' + JSON.stringify(e.detail));
+                });
+                
+                ruffle.addEventListener('error', (e) => {
+                    log('[ERROR] Ruffle error: ' + JSON.stringify(e.detail));
+                });
+                
+                ruffle.addEventListener('log', (e) => {
+                    log('[LOG] ' + e.detail.message);
+                });
+            } else {
+                log('[ERROR] Ruffle not loaded yet, waiting...');
+                setTimeout(checkRuffle, 500);
+            }
         }
+        
+        checkRuffle();
     </script>
 </body>
 </html>
