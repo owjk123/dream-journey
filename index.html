@@ -20,10 +20,15 @@
         #container {
             position: relative;
         }
-        #game {
+        #game-wrapper {
+            width: 940px;
+            height: 590px;
             border: 2px solid #4a4a6a;
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(100, 100, 150, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         #status {
             margin-top: 20px;
@@ -49,17 +54,18 @@
     <h1>Dream Journey - Ruffle Test</h1>
     <div id="status">Loading Ruffle...</div>
     <div id="container">
-        <embed id="game" src="./zm3.swf" width="940" height="590" 
-               type="application/x-shockwave-flash"
-               pluginspage="https://www.adobe.com/go/getflashplayer">
+        <div id="game-wrapper">
+            <div id="game-placeholder">Loading SWF...</div>
+        </div>
     </div>
     <div id="log">Console output will appear here...</div>
     
-    <!-- Load Ruffle -->
-    <script src="https://unpkg.com/@ruffle-rs/ruffle@latest"></script>
+    <!-- Load Ruffle from jsDelivr -->
+    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js"></script>
     <script>
         const logEl = document.getElementById('log');
         const statusEl = document.getElementById('status');
+        const placeholder = document.getElementById('game-placeholder');
         
         function log(msg) {
             logEl.textContent += msg + '\n';
@@ -82,7 +88,7 @@
                 statusEl.textContent = 'Ruffle ready!';
                 statusEl.style.color = '#0f0';
                 
-                // Install Ruffle as the player for embed tags
+                // Create Ruffle player
                 const ruffle = RufflePlayer.new();
                 ruffle.config = {
                     "upgradeToHttps": false,
@@ -90,15 +96,11 @@
                     "logLevel": "debug"
                 };
                 
-                // Get the embed element
-                const embed = document.getElementById('game');
-                
-                // Replace with Ruffle
-                const wrapper = document.createElement('div');
-                wrapper.appendChild(ruffle);
-                embed.parentNode.replaceChild(wrapper, embed);
+                // Replace placeholder
+                placeholder.parentNode.replaceChild(ruffle, placeholder);
                 
                 // Load the SWF
+                log('[LOG] Loading zm3.swf...');
                 ruffle.load('./zm3.swf').then(() => {
                     log('[OK] SWF loaded successfully!');
                     statusEl.textContent = 'SUCCESS: SWF loaded!';
@@ -111,7 +113,7 @@
                 
                 // Listen for Ruffle events
                 ruffle.addEventListener('loaded', (e) => {
-                    log('[OK] Ruffle loaded event: ' + JSON.stringify(e.detail));
+                    log('[OK] Ruffle loaded event');
                 });
                 
                 ruffle.addEventListener('error', (e) => {
@@ -123,7 +125,7 @@
                 });
             } else {
                 log('[ERROR] Ruffle not loaded yet, waiting...');
-                setTimeout(checkRuffle, 500);
+                setTimeout(checkRuffle, 1000);
             }
         }
         
