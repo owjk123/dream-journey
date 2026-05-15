@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resInfos>
+	<info resName="zwsf">https://cdn.comment.4399pk.com/control/zwsf2-3.gif?20120719</info>
+	<info resName="ctrl">https://cdn.comment.4399pk.com/control/ctrl_mo_v4.swf?20200601</info>
+	<info resName="ads">https://cdn.comment.4399pk.com/control/A4399dv_base.swf?20200520</info>
+	<info resName="ctrl_v5">https://cdn.comment.4399pk.com/control/ctrl_mo_v5.swf?20200601</info>
+    <info resName="tools_as3">https://cdn.comment.4399pk.com/control/open4399tools_AS3.swf?20230725</info>
+	<!-- <info resName="tools_as3">https://cdn.comment.4399pk.com/control/open4399tools_AS3.swf?20130617</info> -->
+</resInfos>

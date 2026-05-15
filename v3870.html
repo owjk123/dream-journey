@@ -6,41 +6,45 @@
     <title>Dream Journey</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            background: #000;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
         body {
+            background: #000;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
         }
         #game {
             width: 100vw;
-            height: calc(100vw * 590 / 940);
-            max-height: 100vh;
-            max-width: calc(100vh * 940 / 590);
+            height: 100vh;
         }
     </style>
 </head>
 <body>
     <div id="game"></div>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').then(reg => {
+                console.log('SW registered:', reg.scope);
+            }).catch(err => {
+                console.log('SW registration failed:', err);
+            });
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js"></script>
     <script>
         window.RufflePlayer = window.RufflePlayer || {};
         window.RufflePlayer.config = {
             "upgradeToHttps": false,
             "maxExecutionTime": 120,
-            "logLevel": "warn",
+            "logLevel": "debug",
             "autoplay": "on"
         };
         
         window.addEventListener('DOMContentLoaded', () => {
             const ruffle = RufflePlayer.newest().createPlayer();
             document.getElementById('game').appendChild(ruffle);
-            ruffle.load('./zm3.swf');
+            ruffle.load('./v3870.swf');
         });
     </script>
 </body>
