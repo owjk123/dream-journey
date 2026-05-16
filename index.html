@@ -27,6 +27,8 @@
         }
         #game-container {
             display: block;
+            width: 940px;
+            height: 590px;
         }
         #loading {
             position: absolute;
@@ -95,7 +97,7 @@
         <div class="info">Powered by Ruffle</div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.16/ruffle.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.16/ruffle.js"></script>
     <script>
         // 注册Service Worker
         if ('serviceWorker' in navigator) {
@@ -108,11 +110,8 @@
                 });
         }
         
-        window.RufflePlayer = window.RufflePlayer || {};
-        
         // 状态
         const state = {
-            ruffle: null,
             player: null,
             loadingProgress: 0,
             loadTimer: null
@@ -129,7 +128,6 @@
         // 显示错误
         function showError(message) {
             const errorDiv = document.getElementById('error');
-            const loading = document.getElementById('loading');
             if (errorDiv) {
                 errorDiv.innerText = message;
                 errorDiv.style.display = 'block';
@@ -153,18 +151,15 @@
                 updateProgress(10, '正在初始化Ruffle...');
                 
                 // 检查Ruffle是否加载
-                if (typeof RufflePlayer === 'undefined' || typeof RufflePlayer.newest !== 'function') {
+                if (typeof window.RufflePlayer === 'undefined') {
                     throw new Error('Ruffle未正确加载');
                 }
                 
-                const ruffle = RufflePlayer.newest();
-                state.ruffle = ruffle;
-                
-                console.log('Ruffle version:', ruffle.version || 'unknown');
+                console.log('Ruffle version:', window.RufflePlayer.version || 'unknown');
                 updateProgress(20, 'Ruffle已就绪');
                 
-                // 创建播放器
-                const player = ruffle.create_player();
+                // 创建播放器 (Ruffle自托管版本的API)
+                const player = window.RufflePlayer.createPlayer();
                 state.player = player;
                 
                 // 配置播放器
@@ -209,8 +204,8 @@
                 console.log('Loading gamefile.swf...');
                 updateProgress(40, '正在加载游戏文件...');
                 
-                // 加载gamefile
-                const loadPromise = player.load('/gamefile.swf');
+                // 加载gamefile (使用相对路径)
+                const loadPromise = player.load('./gamefile.swf');
                 
                 // 设置超时
                 const timeoutPromise = new Promise((_, reject) => {
@@ -234,7 +229,8 @@
         // DOM加载完成后初始化
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM loaded, starting game init...');
-            setTimeout(initGame, 100);
+            // 等待Ruffle脚本完全加载
+            setTimeout(initGame, 500);
         });
         
         // 备用：5秒后如果还没加载，显示提示
