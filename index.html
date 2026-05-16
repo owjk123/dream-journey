@@ -72,6 +72,14 @@
             color: #666;
             font-size: 12px;
         }
+        #error {
+            color: #ff6b6b;
+            font-size: 14px;
+            margin-top: 20px;
+            max-width: 500px;
+            text-align: center;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -81,12 +89,13 @@
             <div class="loading-bar">
                 <div class="loading-progress" id="progress"></div>
             </div>
+            <div id="error"></div>
         </div>
-        <ruffle-canvas id="game" width="940" height="590"></ruffle-canvas>
+        <div id="game-container"></div>
         <div class="info">Powered by Ruffle</div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js"></script>
+    <script src="https://unpkg.com/@ruffle-rs/ruffle@0.1.0-nightly.2025.5.15/ruffle.js"></script>
     <script>
         // 注册Service Worker
         if ('serviceWorker' in navigator) {
@@ -101,45 +110,139 @@
         
         window.RufflePlayer = window.RufflePlayer || {};
         
-        // 监听Ruffle加载完成
-        document.addEventListener("DOMContentLoaded", function() {
-            const ruffle = window.RufflePlayer.newest();
-            const player = ruffle.create_player();
-            const gameCanvas = document.getElementById("game");
-            gameCanvas.append(player);
-            
-            // 显示加载进度
-            const progress = document.getElementById("progress");
-            const loading = document.getElementById("loading");
-            
-            // 模拟加载进度
-            let fakeProgress = 0;
-            const progressInterval = setInterval(() => {
-                fakeProgress += Math.random() * 10;
-                if (fakeProgress > 90) fakeProgress = 90;
-                progress.style.width = fakeProgress + "%";
-            }, 200);
-            
-            // 加载gamefile
-            player.load("gamefile.swf").then(() => {
-                clearInterval(progressInterval);
-                progress.style.width = "100%";
-                setTimeout(() => {
-                    loading.classList.add("hidden");
+        // 状态
+        const state = {
+            ruffle: null,
+            player: null,
+            loadingProgress: 0,
+            loadTimer: null
+        };
+        
+        // 更新进度条
+        function updateProgress(percent, text) {
+            const progress = document.getElementById('progress');
+            const loadingText = document.querySelector('.loading-text');
+            if (progress) progress.style.width = percent + '%';
+            if (text && loadingText) loadingText.innerText = text;
+        }
+        
+        // 显示错误
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            const loading = document.getElementById('loading');
+            if (errorDiv) {
+                errorDiv.innerText = message;
+                errorDiv.style.display = 'block';
+            }
+            updateProgress(100);
+            console.error('Game Error:', message);
+        }
+        
+        // 隐藏加载界面
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.classList.add('hidden');
+            }
+        }
+        
+        // 主加载函数
+        async function initGame() {
+            try {
+                console.log('Initializing Ruffle...');
+                updateProgress(10, '正在初始化Ruffle...');
+                
+                // 检查Ruffle是否加载
+                if (typeof RufflePlayer === 'undefined' || typeof RufflePlayer.newest !== 'function') {
+                    throw new Error('Ruffle未正确加载');
+                }
+                
+                const ruffle = RufflePlayer.newest();
+                state.ruffle = ruffle;
+                
+                console.log('Ruffle version:', ruffle.version || 'unknown');
+                updateProgress(20, 'Ruffle已就绪');
+                
+                // 创建播放器
+                const player = ruffle.create_player();
+                state.player = player;
+                
+                // 配置播放器
+                player.config = {
+                    letterbox: "on",
+                    showSwfDownload: false,
+                    upgradeToHttps: false,
+                    maxExecutionTime: 60
+                };
+                
+                console.log('Player created, attaching to DOM...');
+                updateProgress(30, '正在创建播放器...');
+                
+                // 附加到DOM
+                const container = document.getElementById('game-container');
+                container.appendChild(player);
+                
+                // 监听播放器事件
+                player.addEventListener('loaded', (e) => {
+                    console.log('Ruffle loaded event:', e);
+                    updateProgress(100, '加载完成！');
+                    setTimeout(hideLoading, 500);
+                });
+                
+                player.addEventListener('error', (e) => {
+                    console.error('Ruffle error event:', e);
+                    showError('Ruffle运行时错误: ' + (e.error?.message || '未知错误'));
+                });
+                
+                player.addEventListener('log', (e) => {
+                    console.log('Ruffle log:', e.message);
+                });
+                
+                // 模拟进度
+                state.loadTimer = setInterval(() => {
+                    state.loadingProgress += 5;
+                    if (state.loadingProgress < 80) {
+                        updateProgress(state.loadingProgress);
+                    }
                 }, 500);
-                console.log("Game loaded successfully!");
-            }).catch((e) => {
-                clearInterval(progressInterval);
-                progress.style.width = "100%";
-                console.error("Failed to load game:", e);
-                loading.innerHTML = '<div class="loading-text" style="color: #ff6b6b;">加载失败: ' + e.message + '</div>';
-            });
-            
-            // 处理未捕获的错误
-            player.addEventListener("error", (e) => {
-                console.error("Ruffle error:", e.error);
-            });
+                
+                console.log('Loading gamefile.swf...');
+                updateProgress(40, '正在加载游戏文件...');
+                
+                // 加载gamefile
+                const loadPromise = player.load('/gamefile.swf');
+                
+                // 设置超时
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('加载超时 (60秒)')), 60000);
+                });
+                
+                await Promise.race([loadPromise, timeoutPromise]);
+                
+                console.log('Gamefile loaded successfully!');
+                clearInterval(state.loadTimer);
+                updateProgress(100, '加载完成！');
+                setTimeout(hideLoading, 500);
+                
+            } catch (error) {
+                console.error('Failed to load game:', error);
+                clearInterval(state.loadTimer);
+                showError('加载失败: ' + error.message);
+            }
+        }
+        
+        // DOM加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, starting game init...');
+            setTimeout(initGame, 100);
         });
+        
+        // 备用：5秒后如果还没加载，显示提示
+        setTimeout(() => {
+            if (state.player === null) {
+                updateProgress(50, '可能需要一些时间加载...');
+            }
+        }, 5000);
     </script>
 </body>
 </html>
