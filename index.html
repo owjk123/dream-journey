@@ -1,183 +1,145 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dream Journey - ZM3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>造梦江湖之小宝传奇 - 浏览器版</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            background: #1a1a2e;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        #container {
+            position: relative;
+            background: #16213e;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+        #game {
+            display: block;
+        }
+        #loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-        }
-        #loading {
-            position: absolute;
-            z-index: 10;
-            color: #e0e0e0;
-            text-align: center;
+            z-index: 100;
             transition: opacity 0.5s;
         }
-        #loading .title {
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-text {
+            color: #e94560;
             font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
         }
-        #loading .status {
-            font-size: 14px;
-            color: #999;
-            margin-bottom: 12px;
-        }
-        #loading .bar-wrap {
+        .loading-bar {
             width: 300px;
-            height: 4px;
-            background: #333;
-            border-radius: 2px;
+            height: 6px;
+            background: #0f3460;
+            border-radius: 3px;
             overflow: hidden;
         }
-        #loading .bar {
-            width: 0%;
+        .loading-progress {
             height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            border-radius: 2px;
+            background: linear-gradient(90deg, #e94560, #0f3460);
+            width: 0%;
             transition: width 0.3s;
         }
-        #game-container {
-            width: 100vw;
-            height: calc(100vw * 590 / 940);
-            max-height: 100vh;
-            max-width: calc(100vh * 940 / 590);
-            position: relative;
-        }
-        #game-container.hidden { opacity: 0; }
-        #error {
-            display: none;
+        .info {
             position: absolute;
-            z-index: 20;
-            color: #ff6b6b;
-            text-align: center;
-            max-width: 400px;
-            padding: 20px;
-        }
-        #error .msg {
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        #error .detail {
+            bottom: 10px;
+            left: 10px;
+            color: #666;
             font-size: 12px;
-            color: #999;
-            word-break: break-all;
         }
     </style>
 </head>
 <body>
-    <div id="loading">
-        <div class="title">Dream Journey</div>
-        <div class="status" id="load-status">Initializing Ruffle...</div>
-        <div class="bar-wrap"><div class="bar" id="load-bar"></div></div>
-    </div>
-    <div id="game-container" class="hidden"></div>
-    <div id="error">
-        <div class="msg">Failed to load game</div>
-        <div class="detail" id="error-detail"></div>
+    <div id="container">
+        <div id="loading">
+            <div class="loading-text">正在加载造梦江湖...</div>
+            <div class="loading-bar">
+                <div class="loading-progress" id="progress"></div>
+            </div>
+        </div>
+        <ruffle-canvas id="game" width="940" height="590"></ruffle-canvas>
+        <div class="info">Powered by Ruffle</div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js"></script>
     <script>
-        // Service Worker registration
+        // 注册Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').then(function(reg) {
-                console.log('[Main] SW registered:', reg.scope);
-            }).catch(function(err) {
-                console.warn('[Main] SW registration failed:', err);
+            navigator.serviceWorker.register('./sw.js')
+                .then((reg) => {
+                    console.log('[SW] Service Worker registered:', reg.scope);
+                })
+                .catch((err) => {
+                    console.error('[SW] Registration failed:', err);
+                });
+        }
+        
+        window.RufflePlayer = window.RufflePlayer || {};
+        
+        // 监听Ruffle加载完成
+        document.addEventListener("DOMContentLoaded", function() {
+            const ruffle = window.RufflePlayer.newest();
+            const player = ruffle.create_player();
+            const gameCanvas = document.getElementById("game");
+            gameCanvas.append(player);
+            
+            // 显示加载进度
+            const progress = document.getElementById("progress");
+            const loading = document.getElementById("loading");
+            
+            // 模拟加载进度
+            let fakeProgress = 0;
+            const progressInterval = setInterval(() => {
+                fakeProgress += Math.random() * 10;
+                if (fakeProgress > 90) fakeProgress = 90;
+                progress.style.width = fakeProgress + "%";
+            }, 200);
+            
+            // 加载gamefile
+            player.load("gamefile.swf").then(() => {
+                clearInterval(progressInterval);
+                progress.style.width = "100%";
+                setTimeout(() => {
+                    loading.classList.add("hidden");
+                }, 500);
+                console.log("Game loaded successfully!");
+            }).catch((e) => {
+                clearInterval(progressInterval);
+                progress.style.width = "100%";
+                console.error("Failed to load game:", e);
+                loading.innerHTML = '<div class="loading-text" style="color: #ff6b6b;">加载失败: ' + e.message + '</div>';
             });
-        }
-
-        // Loading UI
-        var loadStatus = document.getElementById('load-status');
-        var loadBar = document.getElementById('load-bar');
-        var gameContainer = document.getElementById('game-container');
-        var loadingDiv = document.getElementById('loading');
-        var errorDiv = document.getElementById('error');
-        var errorDetail = document.getElementById('error-detail');
-
-        function setStatus(text, pct) {
-            loadStatus.textContent = text;
-            if (pct !== undefined) loadBar.style.width = pct + '%';
-        }
-
-        function showError(msg, detail) {
-            loadingDiv.style.display = 'none';
-            errorDiv.style.display = 'block';
-            errorDetail.textContent = detail || '';
-        }
-
-        // Load Ruffle
-        setStatus('Loading Ruffle engine...', 10);
-
-        var script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2026.5.14/ruffle.js';
-        script.onload = function() {
-            setStatus('Ruffle loaded, initializing player...', 30);
-            initGame();
-        };
-        script.onerror = function(e) {
-            showError('Failed to load Ruffle engine', 'CDN might be blocked. Try using a VPN or check your network.');
-        };
-        document.head.appendChild(script);
-
-        function initGame() {
-            try {
-                window.RufflePlayer = window.RufflePlayer || {};
-                window.RufflePlayer.config = {
-                    "upgradeToHttps": false,
-                    "maxExecutionTime": 300,
-                    "logLevel": "warn",
-                    "autoplay": "on",
-                    "openUrlMode": "allow"
-                };
-
-                var ruffle = RufflePlayer.newest().createPlayer();
-                gameContainer.appendChild(ruffle);
-                
-                setStatus('Loading game SWF...', 40);
-                
-                var loadPromise = ruffle.load('./zm3.swf');
-                
-                if (loadPromise && loadPromise.then) {
-                    loadPromise.then(function() {
-                        setStatus('Game loaded!', 100);
-                        setTimeout(function() {
-                            loadingDiv.style.opacity = '0';
-                            gameContainer.classList.remove('hidden');
-                            setTimeout(function() { loadingDiv.style.display = 'none'; }, 500);
-                        }, 500);
-                    }).catch(function(err) {
-                        showError('Game load failed', err.message || String(err));
-                    });
-                } else {
-                    // Fallback for older Ruffle versions
-                    setStatus('Game loading...', 60);
-                    setTimeout(function() {
-                        loadingDiv.style.opacity = '0';
-                        gameContainer.classList.remove('hidden');
-                        setTimeout(function() { loadingDiv.style.display = 'none'; }, 500);
-                    }, 3000);
-                }
-            } catch (e) {
-                showError('Initialization error', e.message);
-            }
-        }
+            
+            // 处理未捕获的错误
+            player.addEventListener("error", (e) => {
+                console.error("Ruffle error:", e.error);
+            });
+        });
     </script>
 </body>
 </html>
